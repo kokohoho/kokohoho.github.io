@@ -32,7 +32,7 @@ rpm -e --nodeps ...
 tar -xvf ...
 ````
 
-####3.安装依赖包
+#### 3.安装依赖包
 
 ````
 rm -f /var/run/yum/pid
