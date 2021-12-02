@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "「原创」Hadoop 一篇精通HDFS"
-subtitle:   "React versus Angular 2: There Will Be Blood"
+subtitle:   "HDFS概述、Shell/API操作、读/写流程、NN/2NN工作机制、DN工作机制"
 date:       2021-11-29 12:00:00
 author:     "NI"
 header-img: "img/post-bg-re-vs-ng2.jpg"
@@ -38,32 +38,32 @@ HDFS（Hadoop Distributed File System），它是一个文件系统，用于存�
 
 #### <font color='red'>HDFS优点</font>
 
-##### 1)高容错性
+ 1)高容错性
 
 > 数据自动保存<font color='red'>多个副本</font>。它通过增加副本的形式，提高容错性。
 
 > 某一个副本丢失以后，它可以自动恢复。
 
-##### 2)适合处理大数据
+ 2)适合处理大数据
 
 > 数据规模：能够处理数据规模达到GB、TB、甚至<font color='red'>PB</font>级别的数据。
 
 > 文件规模：能够处理<font color='red'>百万</font>规模以上的文件数量，数量相当之大。
 
-##### 3)可构建在廉价机器上，通过多副本机制，提高可靠性
+ 3)可构建在廉价机器上，通过多副本机制，提高可靠性
 
-#### <font color='red'>HDFS缺点</font>
+ <font color='red'>HDFS缺点</font>
 
-##### 1)<font color='red'>不适合低延时数据访问</font>，例如毫秒级存储数据，是做不到的
+ 1)<font color='red'>不适合低延时数据访问</font>，例如毫秒级存储数据，是做不到的
 
-##### 2)<font color='red'>无法高效的对大量小文件进行存储</font>
+ 2)<font color='red'>无法高效的对大量小文件进行存储</font>
 
 > 存储大量小文件的话，它会占用NameNode大量的内存来存储文件目录和块信息。
 > 因为NameNode的物理内容是有限的，所以大量小文件会占用大量可用内存。
 
 > 小文件存储的寻址时间会超过读取时间，它违反了HDFS的设计目标。
 
-##### 3)不支持并发写入、文件随机修改
+ 3)不支持并发写入、文件随机修改
 
 > 一个文件只能有一个写，不允许多个线程同时写。
 
@@ -74,29 +74,38 @@ HDFS（Hadoop Distributed File System），它是一个文件系统，用于存�
 
 #### <font color='purple'>1) NameNode（nn）：就是Master，它是一个主管、管理者。</font>
 
-###### (1) 管理HDFS的名称空间；
-###### (2) 配置副本策略；
-###### (3) 管理数据块（Block）映射信息；
-###### (4) 处理客户端读写请求；
+(1) 管理HDFS的名称空间；
+
+(2) 配置副本策略；
+
+(3) 管理数据块（Block）映射信息；
+
+(4) 处理客户端读写请求；
 
 #### <font color='purple'>2) DataNode（dn）：就是Slave、Worker。NameNode下达命令，DataNode执行实际操作。</font>
 
-###### (1) 存储实际的数据块；
-###### (2) 执行数据块读/写操作；
+ (1) 存储实际的数据块；
+
+ (2) 执行数据块读/写操作；
 
 
 #### <font color='purple'>3) Client：就是客户端。</font>
 
-###### (1) 文件切分。文件上传HDFS的时候，Client将文件切分成一个一个的Block，然后进行上传；
-###### (2) 与NameNode交互，获取文件的位置信息；
-###### (3) 与DataNode交互，读取或者写入数据；
-###### (4) Client提供一些命令来管理HDFS，比例NameNode格式化；
-###### (5) Client可以通过一些命令来访问HDFS，比如对HDFS增删查改操作；
+ (1) 文件切分。文件上传HDFS的时候，Client将文件切分成一个一个的Block，然后进行上传；
+ 
+ (2) 与NameNode交互，获取文件的位置信息；
+ 
+ (3) 与DataNode交互，读取或者写入数据；
+ 
+ (4) Client提供一些命令来管理HDFS，比例NameNode格式化；
+ 
+ (5) Client可以通过一些命令来访问HDFS，比如对HDFS增删查改操作；
 
 #### <font color='purple'>4) SecondaryNameNode（2nn）：并非NameNode的热备。当NameNode挂掉的时候，它并不能马上替换NameNode并提供服务</font>
 
-###### (1) 辅助NameNode，分担其工作量，比如定期合并fsimage和Edits，并推送给NameNode；
-###### (2) 在紧急情况下，可辅助恢复NameNode；
+ (1) 辅助NameNode，分担其工作量，比如定期合并fsimage和Edits，并推送给NameNode；
+ 
+ (2) 在紧急情况下，可辅助恢复NameNode；
 
 ### 1.4 HDFS文件块大小（面试重点）
 
@@ -131,38 +140,48 @@ HDFS中的文件在物理上是分块存储（Block），块的大小可以通�
 
 ![avatar](/img/bigdata/hadoop/hdfs/write.png)
 
-##### （1）客户端通过Distributed FileSystem模块向NameNode请求上传文件，NameNode检查目标文件是否已存在，父目录是否存在
+ （1）客户端通过Distributed FileSystem模块向NameNode请求上传文件，NameNode检查目标文件是否已存在，父目录是否存在
 
-####  （2）NameNode返回是否可以上传。
+  （2）NameNode返回是否可以上传。
 
-####  （3）客户端请求第一个Block上传到哪几个DataNode服务器上。
+ （3）客户端请求第一个Block上传到哪几个DataNode服务器上。
 
-####  （4）NameNode返回3个DataNode节点，分别为dn1，dn2，dn3。
+ （4）NameNode返回3个DataNode节点，分别为dn1，dn2，dn3。
 
-####  （5）客户端通过FSDataOutputStream模块请求dn1上传数据，dn1收到请求会继续调用dn2，然后dn2调用dn3，将这个通信管道建立完成。
+ （5）客户端通过FSDataOutputStream模块请求dn1上传数据，dn1收到请求会继续调用dn2，然后dn2调用dn3，将这个通信管道建立完成。
 
-####  （6）dn1，dn2，dn3逐级应答客户端。
+ （6）dn1，dn2，dn3逐级应答客户端。
 
-####  （7）客户端开始往dn1上传第一个Block（先从磁盘读取数据放到一个本地内存缓存）。以Packet为单位，dn1收到一个Packet就会传给dn2，dn2传给dn3；dn1每传一个Packet会放入一个应答队列等待应答
+ （7）客户端开始往dn1上传第一个Block（先从磁盘读取数据放到一个本地内存缓存）。以Packet为单位，dn1收到一个Packet就会传给dn2，dn2传给dn3；dn1每传一个Packet会放入一个应答队列等待应答
 
-####  （8）当一个Block传输完成之后，客户端再次请求NameNode上传第二个Block的服务器。（重复执行3-7步）。
+ （8）当一个Block传输完成之后，客户端再次请求NameNode上传第二个Block的服务器。（重复执行3-7步）。
 
 #### 4.1.2 网络拓扑-节点距离计算
 
+![avatar](/img/bigdata/hadoop/hdfs/choose.png)
+
+在 HDFS 写数据的过程中，NameNode 会选择距离待上传数据最近距离的 DataNode 接
+收数据。那么这个最近距离怎么计算呢？
+节点距离：两个节点到达最近的共同祖先的距离总和。
+
 #### 4.1.3 机架感知（副本存储节点选择）
 
-### 4.1 HDFS读数据流程
+![avatar](/img/bigdata/hadoop/hdfs/replication.png)
 
-####  （1）客户端通过 DistributedFileSystem 向 NameNode 请求下载文件，NameNode 通过查
-询元数据，找到文件块所在的 DataNode 地址。
+第一个副本首先选择本机架的节点，优选选择客户端所在节点；第二个副本选择另外一个机架中的节点；第三个副本选择第二个副本所在
+机架的另一个节点
 
-####  （2）挑选一台 DataNode（就近原则，然后随机）服务器，请求读取数据。
+### 4.2 HDFS读数据流程
 
-####  （3） DataNode 开始传输数据给客户端（从磁盘里面读取数据输入流，以 Packet 为单位
-来做校验）。
+![avatar](/img/bigdata/hadoop/hdfs/read.png)
 
-####  （4）客户端以 Packet 为单位接收，先在本地缓存，然后写入目标文件。
+  （1）客户端通过 DistributedFileSystem 向 NameNode 请求下载文件，NameNode 通过查询元数据，找到文件块所在的 DataNode 地址。
 
+  （2）挑选一台 DataNode（就近原则，然后随机）服务器，请求读取数据。
+
+  （3） DataNode 开始传输数据给客户端（从磁盘里面读取数据输入流，以 Packet 为单位来做校验）。
+
+  （4）客户端以 Packet 为单位接收，先在本地缓存，然后写入目标文件。
 
 
 ## 第5章 NameNode和SecondaryNameNode
