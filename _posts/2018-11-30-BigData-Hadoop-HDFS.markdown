@@ -277,11 +277,11 @@ hdfs oiv -p 文件类型 -i 镜像文件 -o 转换后文件输出路径
 （3）案例实操
 
 ````
-[atguigu@hadoop102 current]$ pwd
+[kokohoho@hadoop102 current]$ pwd
 /opt/module/hadoop-3.1.3/data/dfs/name/current
-[atguigu@hadoop102 current]$ hdfs oiv -p XML -i
+[kokohoho@hadoop102 current]$ hdfs oiv -p XML -i
 fsimage_0000000000000000025 -o /opt/module/hadoop-3.1.3/fsimage.xml
-[atguigu@hadoop102 current]$ cat /opt/module/hadoop-3.1.3/fsimage.xml
+[kokohoho@hadoop102 current]$ cat /opt/module/hadoop-3.1.3/fsimage.xml
 ````
 
 将显示的 xml 文件内容拷贝到 Idea 中创建的 xml 文件中，并格式化。部分显示结果如
@@ -340,9 +340,9 @@ hdfs oev -p 文件类型 -i 编辑日志 -o 转换后文件输出路径
 （2）案例实操
 
 ````
-[atguigu@hadoop102 current]$ hdfs oev -p XML -i
+[kokohoho@hadoop102 current]$ hdfs oev -p XML -i
 edits_0000000000000000012-0000000000000000013 -o /opt/module/hadoop3.1.3/edits.xml
-[atguigu@hadoop102 current]$ cat /opt/module/hadoop-3.1.3/edits.xml
+[kokohoho@hadoop102 current]$ cat /opt/module/hadoop-3.1.3/edits.xml
 ````
 
 将显示的 xml 文件内容拷贝到 Idea 中创建的 xml 文件中，并格式化。显示结果如下。
