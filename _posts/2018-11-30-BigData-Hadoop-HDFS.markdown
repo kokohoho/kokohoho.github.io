@@ -265,7 +265,7 @@ VERSION
 （1）查看 oiv 和 oev 命令
 
 ````
-[atguigu@hadoop102 current]$ hdfs
+[kokohoho@hadoop102 current]$ hdfs
 oiv apply the offline fsimage viewer to an fsimage
 oev apply the offline edits viewer to an edits file
 ````
@@ -374,7 +374,7 @@ edits_0000000000000000012-0000000000000000013 -o /opt/module/hadoop3.1.3/edits.x
             <CLIENT_MACHINE>192.168.10.102</CLIENT_MACHINE>
             <OVERWRITE>true</OVERWRITE>
             <PERMISSION_STATUS>
-                <USERNAME>atguigu</USERNAME>
+                <USERNAME>kokohoho</USERNAME>
                 <GROUPNAME>supergroup</GROUPNAME>
                 <MODE>420</MODE>
             </PERMISSION_STATUS>
