@@ -130,7 +130,209 @@ HDFS中的文件在物理上是分块存储（Block），块的大小可以通�
 
 ## 第2章 HDFS的Shell操作（开发重点）
 
+### 2.1 基本语法
+
+hadoop fs具体命令 OR hdfs dfs 具体命令
+两个是完全相同的
+
+### 2.2 命令大全
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ bin/hadoop fs
+[-appendToFile <localsrc> ... <dst>]
+ [-cat [-ignoreCrc] <src> ...]
+ [-chgrp [-R] GROUP PATH...]
+ [-chmod [-R] <MODE[,MODE]... | OCTALMODE> PATH...]
+ [-chown [-R] [OWNER][:[GROUP]] PATH...]
+ [-copyFromLocal [-f] [-p] <localsrc> ... <dst>]
+ [-copyToLocal [-p] [-ignoreCrc] [-crc] <src> ... <localdst>]
+ [-count [-q] <path> ...]
+ [-cp [-f] [-p] <src> ... <dst>]
+ [-df [-h] [<path> ...]]
+ [-du [-s] [-h] <path> ...]
+ [-get [-p] [-ignoreCrc] [-crc] <src> ... <localdst>]
+ [-getmerge [-nl] <src> <localdst>]
+ [-help [cmd ...]]
+ [-ls [-d] [-h] [-R] [<path> ...]]
+ [-mkdir [-p] <path> ...]
+ [-moveFromLocal <localsrc> ... <dst>]
+ [-moveToLocal <src> <localdst>]
+ [-mv <src> ... <dst>]
+ [-put [-f] [-p] <localsrc> ... <dst>]
+ [-rm [-f] [-r|-R] [-skipTrash] <src> ...]
+ [-rmdir [--ignore-fail-on-non-empty] <dir> ...]
+ <acl_spec> <path>]]
+ [-setrep [-R] [-w] <rep> <path> ...]
+ [-stat [format] <path> ...]
+ [-tail [-f] <file>]
+ [-test -[defsz] <path>]
+ [-text [-ignoreCrc] <src> ...]
+```
+
+### 2.3 常用命令实操
+
+#### 2.3.1 准备工作
+
+1）启动 Hadoop 集群（方便后续的测试）
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ sbin/start-dfs.sh
+[kokohoho@hadoop103 hadoop-3.1.3]$ sbin/start-yarn.sh
+```
+2）-help：输出这个命令参数
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -help rm
+```
+
+3）创建/sanguo 文件夹
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -mkdir /sanguo
+```
+
+#### 2.3.2 上传
+
+1）-moveFromLocal：从本地剪切粘贴到 HDFS
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ vim shuguo.txt
+输入：
+shuguo
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -moveFromLocal ./shuguo.txt
+/sanguo
+```
+
+2）-copyFromLocal：从本地文件系统中拷贝文件到 HDFS 路径去
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ vim weiguo.txt
+输入：
+weiguo
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -copyFromLocal weiguo.txt
+/sanguo
+```
+
+3）-put：等同于 copyFromLocal，生产环境更习惯用 put
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ vim wuguo.txt
+输入：
+wuguo
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -put ./wuguo.txt /sanguo
+```
+
+4）-appendToFile：追加一个文件到已经存在的文件末尾
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ vim liubei.txt
+输入：
+liubei
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -appendToFile liubei.txt
+/sanguo/shuguo.txt
+```
+
+#### 2.3.3 下载
+
+1）-copyToLocal：从 HDFS 拷贝到本地
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -copyToLocal
+/sanguo/shuguo.txt ./
+```
+
+2）-get：等同于 copyToLocal，生产环境更习惯用 get
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -get
+/sanguo/shuguo.txt ./shuguo2.txt
+```
+
+#### 2.3.4 HDFS直接操作
+
+1）-ls: 显示目录信息
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -ls /sanguo
+```
+
+2）-cat：显示文件内容
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -cat /sanguo/shuguo.txt
+```
+
+3）-chgrp、-chmod、-chown：Linux 文件系统中的用法一样，修改文件所属权限
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -chmod 666 /sanguo/shuguo.txt
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -chown kokohoho:kokohoho /sanguo/shuguo.txt
+```
+
+4）-mkdir：创建路径
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -mkdir /jinguo
+```
+
+5）-cp：从 HDFS 的一个路径拷贝到 HDFS 的另一个路径
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -cp /sanguo/shuguo.txt
+/jinguo
+```
+
+6）-mv：在 HDFS 目录中移动文件
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -mv /sanguo/wuguo.txt /jinguo
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -mv /sanguo/weiguo.txt
+/jinguo
+```
+
+7）-tail：显示一个文件的末尾 1kb 的数据
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -tail /jinguo/shuguo.txt
+```
+
+8）-rm：删除文件或文件夹
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -rm /sanguo/shuguo.txt
+```
+
+9）-rm -r：递归删除目录及目录里面内容
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -rm -r /sanguo
+```
+
+10）-du 统计文件夹的大小信息
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -du -s -h /jinguo
+27 81 /jinguo
+```
+
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -du -h /jinguo
+
+```shell
+14 42 /jinguo/shuguo.txt
+7 21 /jinguo/weiguo.txt
+6 18 /jinguo/wuguo.tx
+说明：27 表示文件大小；81 表示 27*3 个副本；/jinguo 表示查看的目录
+```
+
+11）-setrep：设置 HDFS 中文件的副本数量
+
+```shell
+[kokohoho@hadoop102 hadoop-3.1.3]$ hadoop fs -setrep 10 /jinguo/shuguo.txt
+```
+
 ## 第3章 HDFS的API操作
+
+使用FileSystem类就可以知道全部API
 
 ## 第4章 HDFS的读写流程（面试重点）
 
