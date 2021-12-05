@@ -17,15 +17,21 @@ tags:
 ### hadoop3.x
 
    HDFS NameNode 内部通常端口：8020/9000/9820
+
    HDFS NameNode 对用户的查询端口：9870
+
    Yarn查看任务运行情况端口：8088
+
    历史服务器：19888
 
 ### hadoop2.x
 
    HDFS NameNode 内部通常端口：8020/9000/9820 
+
    HDFS NameNode 对用户的查询端口：50070
+
    Yarn查看任务运行情况端口：8088
+
    历史服务器：19888
 
 
