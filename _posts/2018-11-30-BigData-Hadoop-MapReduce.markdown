@@ -658,7 +658,7 @@ OutputFormat是MapReduce输出的基类，所有实现MapReduce输出都实现�
 
 ##### 1.OutputFormat实现类
 
-![avatar](/img/bigdata/hadoop/hdfs/combiner.png)
+![avatar](/img/bigdata/hadoop/hdfs/OutputFormat实现类.png)
 
 ##### 2.默认输出格式TextOutputFormat
 
