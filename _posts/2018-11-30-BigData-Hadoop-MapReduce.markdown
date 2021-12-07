@@ -683,55 +683,248 @@ OutputFormat是MapReduce输出的基类，所有实现MapReduce输出都实现�
 
 #### 3.5.1 MapTask工作机制
 
+![avatar](/img/bigdata/hadoop/hdfs/maptask.png)
+
+（1）Read 阶段：MapTask 通过 InputFormat 获得的 RecordReader，从输入 InputSplit 中
+解析出一个个 key/value。
+
+（2）Map 阶段：该节点主要是将解析出的 key/value 交给用户编写 map()函数处理，并
+产生一系列新的 key/value。
+
+（3）Collect 收集阶段：在用户编写 map()函数中，当数据处理完成后，一般会调用
+OutputCollector.collect()输出结果。在该函数内部，它会将生成的 key/value 分区（调用
+Partitioner），并写入一个环形内存缓冲区中。
+
+（4）Spill 阶段：即“溢写”，当环形缓冲区满后，MapReduce 会将数据写到本地磁盘上，
+生成一个临时文件。需要注意的是，将数据写入本地磁盘之前，先要对数据进行一次本地排
+序，并在必要时对数据进行合并、压缩等操作。
+
+溢写阶段详情：
+
+步骤 1：利用快速排序算法对缓存区内的数据进行排序，排序方式是，先按照分区编号
+Partition 进行排序，然后按照 key 进行排序。这样，经过排序后，数据以分区为单位聚集在
+一起，且同一分区内所有数据按照 key 有序。
+
+步骤 2：按照分区编号由小到大依次将每个分区中的数据写入任务工作目录下的临时文
+件 output/spillN.out（N 表示当前溢写次数）中。如果用户设置了 Combiner，则写入文件之
+前，对每个分区中的数据进行一次聚集操作。
+
+步骤 3：将分区数据的元信息写到内存索引数据结构 SpillRecord 中，其中每个分区的元
+信息包括在临时文件中的偏移量、压缩前数据大小和压缩后数据大小。如果当前内存索引大
+小超过 1MB，则将内存索引写到文件 output/spillN.out.index 中。
+
+（5）Merge 阶段：当所有数据处理完成后，MapTask 对所有临时文件进行一次合并，
+以确保最终只会生成一个数据文件。
+
+当所有数据处理完后，MapTask 会将所有临时文件合并成一个大文件，并保存到文件
+output/file.out 中，同时生成相应的索引文件 output/file.out.index。
+
+在进行文件合并过程中，MapTask 以分区为单位进行合并。对于某个分区，它将采用多
+轮递归合并的方式。每轮合并 mapreduce.task.io.sort.factor（默认 10）个文件，并将产生的文
+件重新加入待合并列表中，对文件排序后，重复以上过程，直到最终得到一个大文件。
+
+让每个 MapTask 最终只生成一个数据文件，可避免同时打开大量文件和同时读取大量
+小文件产生的随机读取带来的开销。
+
 #### 3.5.2 ReduceTask工作机制
+
+![avatar](/img/bigdata/hadoop/hdfs/reducetask.png)
+
+（1）Copy 阶段：ReduceTask 从各个 MapTask 上远程拷贝一片数据，并针对某一片数
+据，如果其大小超过一定阈值，则写到磁盘上，否则直接放到内存中。
+
+（2）Sort 阶段：在远程拷贝数据的同时，ReduceTask 启动了两个后台线程对内存和磁
+盘上的文件进行合并，以防止内存使用过多或磁盘上文件过多。按照 MapReduce 语义，用
+户编写 reduce()函数输入数据是按 key 进行聚集的一组数据。为了将 key 相同的数据聚在一
+起，Hadoop 采用了基于排序的策略。由于各个 MapTask 已经实现对自己的处理结果进行了
+局部排序，因此，ReduceTask 只需对所有数据进行一次归并排序即可。
+
+（3）Reduce 阶段：reduce()函数将计算结果写到 HDFS 上。
 
 #### 3.5.3 ReduceTask并行度决定机制
 
+回顾：MapTask 并行度由切片个数决定，切片个数由输入文件和切片规则决定。
+
+思考：ReduceTask 并行度由谁决定？
+
+##### 1) 设置ReduceTask并行度（个数）
+
+ReduceTask 的并行度同样影响整个 Job 的执行并发度和执行效率，但与 MapTask 的并
+发数由切片数决定不同，ReduceTask 数量的决定是可以直接手动设置：
+
+```java
+// 默认值是 1，手动设置为 4
+job.setNumReduceTasks(4);
+```
+
+##### 2) 实验：测试ReduceTask多少合适
+
+（1）实验环境：1 个 Master 节点，16 个 Slave 节点：CPU:8GHZ，内存: 2G
+
+（2）实验结论：
+
+![avatar](/img/bigdata/hadoop/hdfs/reducenumber.png)
+
+##### 3) 注意事项：
+
+（1）ReduceTask=0，表示没有Reduce阶段，输出文件个数和Map个数一致。
+
+（2）ReduceTask默认值就是1，所以输出文件个数为一个。
+
+（3）如果数据分布不均匀，就有可能在Reduce阶段产生数据倾斜
+
+（4）ReduceTask数量并不是任意设置，还要考虑业务逻辑需求，有些情况下，需要计算全
+局汇总结果，就只能有1个ReduceTask。
+
+（5）具体多少个ReduceTask，需要根据集群性能而定。
+
+（6）如果分区数不是1，但是ReduceTask为1，是否执行分区过程。答案是：不执行分区过
+程。因为在MapTask的源码中，执行分区的前提是先判断ReduceNum个数是否大于1。不大于1
+肯定不执行。
+
 #### 3.5.4 MapTask & ReduceTask源码解析
+
+##### 1) MapTask源码解析流程
+
+![avatar](/img/bigdata/hadoop/hdfs/maptaskcode.png)
+
+##### 2) ReduceTask源码解析流程
+
+![avatar](/img/bigdata/hadoop/hdfs/reducetaskcode1.png)
+
+![avatar](/img/bigdata/hadoop/hdfs/reducetaskcode2.png)
 
 ### 3.6 Join应用
 
 #### 3.6.1 Reduce Join
 
+省略
+
 #### 3.6.2 Reduce Join案例实操
+
+省略
 
 #### 3.6.3 Map Join
 
+省略
+
 #### 3.6.4 Map Join案例实操
+
+省略
 
 ### 3.7 数据清洗（ETL）
 
+省略。清洗过程往往只需要Mapper程序，不需要Reduce程序。
+
 ### 3.8 MapReduce开发总结
+
+省略
 
 ## 第4章 Hadoop数据压缩（重点）
 
 ### 4.1 概述
 
+#### 1）压缩的好处和坏处
+
+压缩的优点：以减少磁盘IO、减少磁盘存储空间
+
+压缩的缺点：增加CPU开销
+
+#### 1）压缩原则
+
+（1）运算密集型的Job，少用压缩
+
+（2）IO密集型的Job，多用压缩
+
 ### 4.2 MR支持的压缩编码
+
+1）压缩算法对比介绍
+
+![avatar](/img/bigdata/hadoop/hdfs/compress01.png)
+
+![avatar](/img/bigdata/hadoop/hdfs/compress02.png)
+
+2）压缩性能的比较
+
+![avatar](/img/bigdata/hadoop/hdfs/compress03.png)
+
+http://google.github.io/snappy/
+
+Snappy is a compression/decompression library. It does not aim for maximum compression, or
+compatibility with any other compression library; instead, it aims for very high speeds and
+reasonable compression. For instance, compared to the fastest mode of zlib, Snappy is an order of
+magnitude faster for most inputs, but the resulting compressed files are anywhere from 20% to 100%
+bigger.On a single core of a Core i7 processor in 64-bit mode, Snappy compresses at about 250
+MB/sec or more and decompresses at about 500 MB/sec or more
 
 ### 4.3 压缩方式选择
 
+压缩方式选择时重点考虑：压缩/解压缩速度、压缩率（压缩后存储大小）、压缩后是否
+可以支持切片。
+
 #### 4.3.1 Gzip压缩
+
+优点：压缩率比较高；
+
+缺点：不支持 Split；压缩/解压速度一般；
 
 #### 4.3.2 Bzip2压缩
 
+优点：压缩率高；支持 Split；
+
+缺点：压缩/解压速度慢。
+
 #### 4.3.3 Lzo压缩
+
+优点：压缩/解压速度比较快；支持 Split；
+
+缺点：压缩率一般；想支持切片需要额外创建索引。
 
 #### 4.3.4 Snappy压缩
 
+优点：压缩和解压缩速度快；
+
+缺点：不支持 Split；压缩率一般；
+
 #### 4.3.5 压缩位置选择
 
+压缩可以在 MapReduce 作用的任意阶段启用。
+
+![avatar](/img/bigdata/hadoop/hdfs/compress04.png)
+
 ### 4.4 压缩参数配置
+
+1）为了支持多种压缩/解压缩算法，Hadoop 引入了编码/解码器
+
+DEFLATE org.apache.hadoop.io.compress.DefaultCodec
+
+gzip    org.apache.hadoop.io.compress.GzipCodec
+
+bzip2   org.apache.hadoop.io.compress.BZip2Codec
+
+LZO     com.hadoop.compression.lzo.LzopCodec
+
+Snappy  org.apache.hadoop.io.compress.SnappyCodec
+
+2）要在 Hadoop 中启用压缩，可以配置如下参数
+
+![avatar](/img/bigdata/hadoop/hdfs/compress05.png)
+
+![avatar](/img/bigdata/hadoop/hdfs/compress06.png)
 
 ### 4.5 压缩实操案例
 
 #### 4.5.1 Map输出端采用压缩
 
+省略
+
 #### 4.5.1 Reduce输出端采用压缩
+
+省略
 
 ## 第4章 常见错误及解决方案
 
-
+省略
 
 
 
