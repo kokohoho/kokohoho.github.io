@@ -14,7 +14,7 @@ tags:
 
 ### 一、概述
 
-top命令提供运行系统的动态实时视图,执行top命令可得如下图,每隔3s执行一次：
+top命令提供运行系统的动态实时视图,执行top命令可得如下图：
 
 ![avatar](/img/linux/top.png)
 
@@ -116,7 +116,7 @@ ID    USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
 >TIME+COMMAND：任务启动后到现在所使用的全部CPU时间，精确到10ms；运行进程所使用的命令
 
 
-### 四、交互命令
+### 四、交互命令 
 
 h或?： 显示帮助
 
@@ -132,11 +132,74 @@ q：   退出交互回到top界面
 
 ![avatar](/img/linux/top-1.png)
 
+z：彩色
+
+![avatar](/img/linux/top-z.png)
+
+<与>：向前与向后
+
+m：改变内存显示样式
+
+![avatar](/img/linux/top-m.png)
+
+l：显示所有CPU负载
+
+P：按CPU使用排序
+
+![avatar](/img/linux/top-P.png)
+
+N：以PID大小排序
+
+![avatar](/img/linux/top-N.png)
+
+R：对排序进行反转
+
+![avatar](/img/linux/top-R.png)
+
+s：改变画面更新频率
+
+![avatar](/img/linux/top-s.png)
+
 未完，待补充......
 
 ### 五、使用场景
 
 总方向：尝试找出你的机器正在运行什么程序，以及哪个进程耗尽了内存导致系统非常非常慢，这是 top 命令所能胜任的工作。
+
+### 六、案例
+
+基本参数：
+
+默认情况下，top命令是3秒刷新一次
+
+| 参数 | 说明 |
+| ---- | ---- |
+| -d | 指定刷新频率 |
+| -p | 查看指定进程的信息 |
+| -u | 查看指定用户的进程 |
+| -n | 查看指定top次数的信息 |
+| -b | 批次档模式，搭配 "n" 参数一起使用，可以用来将 top 的结果输出到档案内 |
+
+
+案例1：1秒刷新一次
+
+>top -d 1
+
+案例2：查看指定用户nginx进程
+
+>top -d 1 -u nginx
+
+案例3：将两次top信息写入到文件
+
+>top -b -n 2 > top.txt
+
+案例4：查看PID为1352的信息
+
+>top -p 1352
+
+
+
+
 
 
 
