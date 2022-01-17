@@ -8,8 +8,9 @@ header-img: "img/post-bg-re-vs-ng2.jpg"
 header-mask: 0.3
 catalog:    true
 tags:
-  - Hadoop
-  - 端口号
+  - Linux
+  - top
+  - 监控
 ---
 
 ### 一、概述
